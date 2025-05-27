@@ -34,11 +34,11 @@ public class SimulationStudy {
 	 * They get converted to simulation time units in setSimulationParameters.
 	 */
 	protected long cNInit = 10000;
-	protected double cCvar = 0.5; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
+	protected double cCvar = 1.5; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
 	protected long lBatch = 1000;
 
 	// 5.1.3
-	protected final double cMeanST = 1.0; // E[ST]
+	protected final double cMeanST = 1.5; // E[ST]
 	protected double cSystemUtilization = 0.5; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
 	protected double cMeanIAT = cMeanST / cSystemUtilization; // E[IAT] = E[ST] / p
 
@@ -194,7 +194,21 @@ public class SimulationStudy {
 		 * You can use this.cVar as a configuration parameter for Cvar[IAT]
 		 * !!! Make sure to use StdRNG objects with different seeds !!!
 		 */
-		RandVar iavRandVar = new Exponential(new StdRNG(1337),1);
+		RandVar iavRandVar = null;
+		if(this.cCvar < 1) {
+			System.out.println("Choosing ErlangK");
+			iavRandVar = new ErlangK(new StdRNG(1337),1,1);
+
+		} else if (this.cCvar > 1) {
+			System.out.println("Choosing HyperExponential");
+			iavRandVar = new HyperExponential(new StdRNG(1337));
+
+		}
+		else {
+			System.out.println("Choosing Exponential");
+			iavRandVar = new Exponential(new StdRNG(1337),1);
+		}
+
 		iavRandVar.setCvar(this.cCvar);
 		RandVar serviceTimeRandVar = new Exponential(new StdRNG(420),1);
 
