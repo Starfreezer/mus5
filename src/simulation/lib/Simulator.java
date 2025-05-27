@@ -213,34 +213,27 @@ public class Simulator implements IEventObserver{
 
 				DiscreteConfidenceCounterWithRelativeError batchWaitingTimeCRE = (DiscreteConfidenceCounterWithRelativeError) sims.statisticObjects.get(sims.ccreBatchWaitingTime);
 
-				if(state.isTransientPhaseOver()) {
-					DiscreteCounter tempWaitingTimeCounter = (DiscreteCounter) sims.statisticObjects.get(sims.tempdtcBatchWaitingTime);
-					tempWaitingTimeCounter.count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
+				DiscreteCounter tempBatchWaitingTimeCounter = (DiscreteCounter) sims.statisticObjects.get(sims.tempdtcBatchWaitingTime);
+				tempBatchWaitingTimeCounter.count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
 
-					if (state.numSamplesInCurrentBatch >= sims.batchLength) {
-						System.out.println("New Batch! Total Batches " + sims.numBatches);
-						sims.numBatches = sims.numBatches + 1;
-						//New Batch, therefore reset counter and add to batch counter
-						batchWaitingTimeCRE.count(tempWaitingTimeCounter.getMean());
-						sims.statisticObjects.put(sims.tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting counter"));
-					}
+				if (state.numSamplesInCurrentBatch >= sims.batchLength) {
+					System.out.println("New Batch! Total Batches " + sims.numBatches);
+					sims.numBatches++;
+					// New Batch, therefore reset counter and add to batch counter
+					batchWaitingTimeCRE.count(tempBatchWaitingTimeCounter.getMean());
+					sims.statisticObjects.put(sims.tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting time/customer"));
 				}
-
-
-
+				
+				// Check if Simulation can be stoppeed
+				if(batchWaitingTimeCRE.maxRelErr() < 0.0001 || batchWaitingTimeCRE.maxRelErr() < 0.05) {
+					this.stop();
+				}
 
                 sims.statisticObjects.get(sims.dtcWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
                 sims.statisticObjects.get(sims.dthWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
 
                 sims.statisticObjects.get(sims.dtcServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
                 sims.statisticObjects.get(sims.dthServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
-
-				// Check if Simulation can be stoppeed
-
-				if(batchWaitingTimeCRE.maxRelErr() < 0.0001 || batchWaitingTimeCRE.maxRelErr() < 0.05) {
-					this.stop();
-				}
-
             }
 
             // update server utilization
