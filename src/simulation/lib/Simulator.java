@@ -193,86 +193,85 @@ public class Simulator implements IEventObserver{
 	 * @param currentCustomer current customer
 	 */
 	private void updateStatsSCE(Customer currentCustomer){
-		sims.minQS = state.queueSize < sims.minQS ? state.queueSize : sims.minQS;
-		sims.maxQS = state.queueSize > sims.maxQS ? state.queueSize : sims.maxQS;
-
-        // update statistics if transient phase is over
-        if(this.state.isTransientPhaseOver()) {
-            if (currentCustomer != null) {
-
-            	/*
-				 * TODO Problem 5.1 - Handle batches and update your counters here
-				 * - Update your batch means counters if a batch is full
-				 * - Update counters for individual samples
-				 * - !!! Also check if the simulation can be terminated !!!
-				 */
+		sims.minQS = Math.min(state.queueSize, sims.minQS);
+		sims.maxQS = Math.max(state.queueSize, sims.maxQS);
 
 
-                // update customer service end time
-                currentCustomer.serviceEndTime = getSimTime();
+		if(this.state.isTransientPhaseOver()) {
+			if (currentCustomer != null) {
+				currentCustomer.serviceEndTime = getSimTime();
 
 				DiscreteConfidenceCounterWithRelativeError batchWaitingTimeCRE = (DiscreteConfidenceCounterWithRelativeError) sims.statisticObjects.get(sims.ccreBatchWaitingTime);
-
 				DiscreteCounter tempBatchWaitingTimeCounter = (DiscreteCounter) sims.statisticObjects.get(sims.tempdtcBatchWaitingTime);
-				tempBatchWaitingTimeCounter.count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
 
-				// 5.1.4 Count how often a customer waits
-				if(currentCustomer.getTimeInQueue() > 0) {
+				double timeInQueueReal = simTimeToRealTime(currentCustomer.getTimeInQueue());
+				double timeInServiceReal = simTimeToRealTime(currentCustomer.getTimeInService());
+
+				tempBatchWaitingTimeCounter.count(timeInQueueReal);
+
+				// Count how often a customer waits
+				if (currentCustomer.getTimeInQueue() > 0) {
 					sims.numWaitingTimeExceeds0++;
 				}
 
+				// Count how often the customer waited > 5 * mean service time
+				if (currentCustomer.getTimeInQueue() > 5 * sims.randVarServiceTime.getMean()) {
+					sims.numWaitingTimeExceeds5TimesServiceTime++;
+
+					// Waited more than 5×E[ST] for confidence calculation (use 1)
+					sims.statisticObjects.get(sims.dccWaitingTimeCustomer).count(1);
+				} else if (currentCustomer.getTimeInQueue() > 0) {
+					// Waited > 0 but not more than 5×E[ST] confidence calculation (use 0)
+					sims.statisticObjects.get(sims.dccWaitingTimeCustomer).count(0);
+				}
+
+				// Batch handling
 				if (state.numSamplesInCurrentBatch >= sims.batchLength) {
 					System.out.println("New Batch! Total Batches " + sims.numBatches);
 					sims.numBatches++;
-					// New Batch, therefore reset counter and add to batch counter
-					batchWaitingTimeCRE.count(tempBatchWaitingTimeCounter.getMean());
-					// 5.1.4 Mean waiting time batch
-					sims.statisticObjects.get(sims.dtcBatchWaitingTime).count(tempBatchWaitingTimeCounter.getMean());
 
-					// 5.1.4 Check how often batch waiting time exceeds mean.
-					if(tempBatchWaitingTimeCounter.getMean() > 5 * sims.randVarServiceTime.getMean()){
+					double batchMean = tempBatchWaitingTimeCounter.getMean();
+					batchWaitingTimeCRE.count(batchMean);
+					sims.statisticObjects.get(sims.dtcBatchWaitingTime).count(batchMean);
+
+					// Waited more than 5×E[ST] for confidence calculation (use 1)
+					System.out.println("BATCH MEAN: " + batchMean);
+					if (batchMean > 5 * sims.randVarServiceTime.getMean()) {
 						sims.numBatchWaitingTimeExceeds5TimesBatchServiceTime++;
+						sims.statisticObjects.get(sims.dccWaitingTimeCustomerBatch).count(1);
+					}
+					// Waited > 0 but not more than 5×E[ST] confidence calculation (use 0)
+					else if (batchMean > 0) {
+						sims.statisticObjects.get(sims.dccWaitingTimeCustomerBatch).count(0);
+					}
+
+					if (batchMean > 0) {
+						sims.numWaitingTimeExceeds0Batch++;
 					}
 
 					sims.statisticObjects.put(sims.tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting time/customer"));
 				}
-				
-				// Check if Simulation can be stopped
-				if(batchWaitingTimeCRE.maxRelErr() < 0.05 || batchWaitingTimeCRE.maxAbsErr() < 0.0001) {
+
+				// Check stopping condition
+				if (batchWaitingTimeCRE.maxRelErr() < 0.05 || batchWaitingTimeCRE.maxAbsErr() < 0.0001) {
 					this.stop();
 				}
 
-				// 5.1.4 mean waiting time all customers.
-                sims.statisticObjects.get(sims.dtcWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
-                sims.statisticObjects.get(sims.dthWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
+				// Mean waiting & service times (for histograms + global stats)
+				sims.statisticObjects.get(sims.dtcWaitingTime).count(timeInQueueReal);
+				sims.statisticObjects.get(sims.dthWaitingTime).count(timeInQueueReal);
+				sims.statisticObjects.get(sims.dtcServiceTime).count(timeInServiceReal);
+				sims.statisticObjects.get(sims.dthServiceTime).count(timeInServiceReal);
+			}
 
-                sims.statisticObjects.get(sims.dtcServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
-                sims.statisticObjects.get(sims.dthServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
-
-				// 5.1.4 See how many customers waiting time exceed 5 times the mean service time.
-				if(currentCustomer.getTimeInQueue() > 5 * sims.randVarServiceTime.getMean()){
-					sims.numWaitingTimeExceeds5TimesServiceTime++;
-				}
-
-            }
-
-            // update server utilization
-            if (state.serverBusy == true) {
-                // Server is busy
-                sims.statisticObjects.get(sims.ctcServerUtilization).count(1);
-                sims.statisticObjects.get(sims.cthServerUtilization).count(1);
-            } else {
-                // Server is not busy
-                sims.statisticObjects.get(sims.ctcServerUtilization).count(0);
-                sims.statisticObjects.get(sims.cthServerUtilization).count(0);
-            }
-
-
-
-
-        }
+			// Update server utilization
+			int serverBusyValue = state.serverBusy ? 1 : 0;
+			sims.statisticObjects.get(sims.ctcServerUtilization).count(serverBusyValue);
+			sims.statisticObjects.get(sims.cthServerUtilization).count(serverBusyValue);
+		}
 	}
-	
+
+
 	/**
 	 * @see IEventObserver#updateQueueOccupancyHandler(Object sender)
 	 */
