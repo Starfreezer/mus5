@@ -280,6 +280,7 @@ public class SimulationStudy {
 			System.out.println(statisticObjects.get(ccreBatchWaitingTime).report());
 			System.out.println(statisticObjects.get(dtcWaitingTime).report());
 			System.out.println(statisticObjects.get(dtcServiceTime).report());
+			System.out.println(statisticObjects.get(tempdtcBatchWaitingTime).report());
 
 
 
