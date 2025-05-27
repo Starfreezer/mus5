@@ -225,7 +225,7 @@ public class Simulator implements IEventObserver{
 				}
 				
 				// Check if Simulation can be stopped
-				if(batchWaitingTimeCRE.maxRelErr() < 0.0001 || batchWaitingTimeCRE.maxRelErr() < 0.05) {
+				if(batchWaitingTimeCRE.maxRelErr() < 0.05 || batchWaitingTimeCRE.maxAbsErr() < 0.0001) {
 					this.stop();
 				}
 
