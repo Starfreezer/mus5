@@ -33,8 +33,10 @@ public class SimulationStudy {
 	 * Note: Units are real time units (seconds).
 	 * They get converted to simulation time units in setSimulationParameters.
 	 */
-	 protected long cNInit;
-	 //protected cCvar = ... <- configuration Parameter for cVar[IAT]
+	 protected long cNInit = 10000;
+	 protected double cCvar = 0.5; //<- configuration Parameter for cVar[IAT]
+	 protected long lBatch = 1000;
+
 
 	/**
 	 * Main method
@@ -176,6 +178,10 @@ public class SimulationStudy {
 		 */
 		// this.nInit = cNInit;
 		// this.cVar = ...
+		this.nInit = this.cNInit;
+		this.cVar = this.cCvar;
+		this.batchLength = this.lBatch;
+
 
 
 		/*
@@ -184,6 +190,16 @@ public class SimulationStudy {
 		 * You can use this.cVar as a configuration parameter for Cvar[IAT]
 		 * !!! Make sure to use StdRNG objects with different seeds !!!
 		 */
+		RandVar iavRandVar = new Exponential(new StdRNG(1337),1);
+		iavRandVar.setCvar(this.cCvar);
+		RandVar serviceTimeRandVar = new Exponential(new StdRNG(420),1);
+
+		this.randVarInterArrivalTime = iavRandVar;
+		this.randVarServiceTime = serviceTimeRandVar;
+		System.out.println("SETTTING PARAMETERS");
+
+
+
 	}
 
 	/**
@@ -215,6 +231,11 @@ public class SimulationStudy {
 		 * TODO Problem 5.1.1 - Create a DiscreteConfidenceCounterWithRelativeError
 		 * In order to check later if the simulation can be terminated according to the condition
 		 */
+		statisticObjects.put(ccreBatchWaitingTime, new DiscreteConfidenceCounterWithRelativeError("batch waiting time/customer", 0.05));
+		statisticObjects.put(tempdtcBatchWaitingTime, new DiscreteCounter("temp waiting time/customer"));
+
+
+
 		/*
 		 * TODO Problem 5.1.4 - Create counter to calculate the mean waiting time with batch means method
 		 */
@@ -256,6 +277,12 @@ public class SimulationStudy {
 			 * TODO Problem 5.1 - Output reporting information!
 			 * Print your statistic objects which are needed to answer the questions in the exercise sheet
 			 */
+			System.out.println(statisticObjects.get(ccreBatchWaitingTime).report());
+			System.out.println(statisticObjects.get(dtcWaitingTime).report());
+			System.out.println(statisticObjects.get(dtcServiceTime).report());
+
+
+
 
 		}
 

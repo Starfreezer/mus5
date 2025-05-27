@@ -2,6 +2,7 @@ package simulation.lib;
 
 import simulation.lib.counter.Counter;
 import simulation.lib.counter.DiscreteConfidenceCounterWithRelativeError;
+import simulation.lib.counter.DiscreteCounter;
 import simulation.lib.event.CustomerArrivalEvent;
 import simulation.lib.event.Event;
 import simulation.lib.event.IEventObserver;
@@ -18,6 +19,7 @@ public class Simulator implements IEventObserver{
 	private long now;
 	private SortableQueue ec;
 	private boolean stop;
+	private long totalBatches = 0;
 	
 	/**
 	 * Contains simulator statistics and parameters
@@ -89,6 +91,7 @@ public class Simulator implements IEventObserver{
 
 				//set event time as new simtime
 				now = e.getTime();
+
 				
 				//register for notification
 				e.register(this);
@@ -98,6 +101,9 @@ public class Simulator implements IEventObserver{
 
 				//unregister notifications
 				e.unregister(this);
+
+
+
 			} else {
 				System.out.println("Event chain empty.");
 				stop = true;
@@ -206,12 +212,35 @@ public class Simulator implements IEventObserver{
                 // update customer service end time
                 currentCustomer.serviceEndTime = getSimTime();
 
+				DiscreteConfidenceCounterWithRelativeError batchWaitingTimeCRE = (DiscreteConfidenceCounterWithRelativeError) sims.statisticObjects.get(sims.ccreBatchWaitingTime);
+
+				if(state.isTransientPhaseOver()) {
+					DiscreteCounter tempWaitingTimeCounter = (DiscreteCounter) sims.statisticObjects.get(sims.tempdtcBatchWaitingTime);
+					tempWaitingTimeCounter.count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
+
+					if (state.numSamplesInCurrentBatch >= sims.batchLength) {
+						System.out.println("New Batch! Total Batches " + totalBatches);
+						totalBatches = totalBatches + 1;
+						//New Batch, therefore reset counter and add to batch counter
+						batchWaitingTimeCRE.count(tempWaitingTimeCounter.getMean());
+						sims.statisticObjects.put(sims.tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting counter"));
+					}
+				}
+
+
+
 
                 sims.statisticObjects.get(sims.dtcWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
                 sims.statisticObjects.get(sims.dthWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
 
                 sims.statisticObjects.get(sims.dtcServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
                 sims.statisticObjects.get(sims.dthServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
+
+				// Check if Simulation can be stoppeed
+
+				if(batchWaitingTimeCRE.maxRelErr() < 0.0001 || batchWaitingTimeCRE.maxRelErr() < 0.05) {
+					stop = true;
+				}
 
             }
 
@@ -225,6 +254,10 @@ public class Simulator implements IEventObserver{
                 sims.statisticObjects.get(sims.ctcServerUtilization).count(0);
                 sims.statisticObjects.get(sims.cthServerUtilization).count(0);
             }
+
+
+
+
         }
 	}
 	
@@ -244,6 +277,8 @@ public class Simulator implements IEventObserver{
 	 */
 	public void pushNewEventHandler(Class<?> c) {
 		if (c == CustomerArrivalEvent.class) {
+			//System.out.println("Customer Arrival Event handler called ");
+			//System.out.println(sims.randVarInterArrivalTime.getRV());
 			pushNewEvent(new CustomerArrivalEvent(state, this.getSimTime() + realTimeToSimTime(sims.randVarInterArrivalTime.getRV())));
 		}else if(c == ServiceCompletionEvent.class){
 			pushNewEvent(new ServiceCompletionEvent(state, this.getSimTime() + realTimeToSimTime(sims.randVarServiceTime.getRV())));	

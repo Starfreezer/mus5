@@ -2,6 +2,7 @@ package study;
 
 import simulation.lib.Customer;
 import simulation.lib.SortableQueue;
+import simulation.lib.counter.DiscreteCounter;
 
 /**
  * Represents the state of the simulator.
@@ -63,8 +64,7 @@ public class SimulationState {
 		 /*
 		 * TODO Problem 5.1.1 - Implement this method
 		 */
-
-		return false;
+		return numSamples > sims.nInit;
 	}
 
 	/**
