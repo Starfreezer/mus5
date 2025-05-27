@@ -33,10 +33,14 @@ public class SimulationStudy {
 	 * Note: Units are real time units (seconds).
 	 * They get converted to simulation time units in setSimulationParameters.
 	 */
-	 protected long cNInit = 10000;
-	 protected double cCvar = 0.5; //<- configuration Parameter for cVar[IAT]
-	 protected long lBatch = 1000;
+	protected long cNInit = 10000;
+	protected double cCvar = 0.5; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
+	protected long lBatch = 1000;
 
+	// 5.1.3
+	protected final double cMeanST = 1.0; // E[ST]
+	protected double cSystemUtilization = 0.5; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
+	protected double cMeanIAT = cMeanST / cSystemUtilization; // E[IAT] = E[ST] / p
 
 	/**
 	 * Main method
@@ -231,8 +235,8 @@ public class SimulationStudy {
 		 * TODO Problem 5.1.1 - Create a DiscreteConfidenceCounterWithRelativeError
 		 * In order to check later if the simulation can be terminated according to the condition
 		 */
-		statisticObjects.put(ccreBatchWaitingTime, new DiscreteConfidenceCounterWithRelativeError("batch waiting time/customer", 0.05));
-		statisticObjects.put(tempdtcBatchWaitingTime, new DiscreteCounter("temp waiting time/customer"));
+		statisticObjects.put(ccreBatchWaitingTime, new DiscreteConfidenceCounterWithRelativeError("batch waiting time/customer", 0.1));
+		statisticObjects.put(tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting time/customer"));
 
 
 
@@ -277,15 +281,30 @@ public class SimulationStudy {
 			 * TODO Problem 5.1 - Output reporting information!
 			 * Print your statistic objects which are needed to answer the questions in the exercise sheet
 			 */
+			// for (IStatisticObject so : statisticObjects.values()) {
+			// 	System.out.println(so.report());
+			// }
+
 			System.out.println(statisticObjects.get(ccreBatchWaitingTime).report());
 			System.out.println(statisticObjects.get(dtcWaitingTime).report());
 			System.out.println(statisticObjects.get(dtcServiceTime).report());
 			System.out.println(statisticObjects.get(tempdtcBatchWaitingTime).report());
 
-
-
-
 		}
 
+	}
+
+	// 5.1.3
+	public void setSystemUtilization(double utilization) {
+		if (utilization < 0.05 || utilization > 0.95) {
+			throw new IllegalArgumentException("System utilization must be in [0.05, 0.95].");
+		}
+		double granularity = 0.05;
+		double mod = (utilization - 0.05) % granularity;
+		if (mod > 1e-9 && granularity - mod > 1e-9) {
+			throw new IllegalArgumentException("System utilization must be in steps of 0.05.");
+		}
+		this.cSystemUtilization = utilization;
+		this.cMeanIAT = this.cMeanST / this.cSystemUtilization;
 	}
 }
