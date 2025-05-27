@@ -224,7 +224,7 @@ public class Simulator implements IEventObserver{
 					sims.statisticObjects.put(sims.tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting time/customer"));
 				}
 				
-				// Check if Simulation can be stoppeed
+				// Check if Simulation can be stopped
 				if(batchWaitingTimeCRE.maxRelErr() < 0.0001 || batchWaitingTimeCRE.maxRelErr() < 0.05) {
 					this.stop();
 				}
