@@ -231,7 +231,7 @@ public class SimulationStudy {
 		 * TODO Problem 5.1.1 - Create a DiscreteConfidenceCounterWithRelativeError
 		 * In order to check later if the simulation can be terminated according to the condition
 		 */
-		statisticObjects.put(ccreBatchWaitingTime, new DiscreteConfidenceCounterWithRelativeError("batch waiting time/customer", 0.05));
+		statisticObjects.put(ccreBatchWaitingTime, new DiscreteConfidenceCounterWithRelativeError("batch waiting time/customer", 0.1));
 		statisticObjects.put(tempdtcBatchWaitingTime, new DiscreteCounter("temp waiting time/customer"));
 
 
