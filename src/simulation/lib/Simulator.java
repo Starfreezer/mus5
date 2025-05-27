@@ -216,11 +216,24 @@ public class Simulator implements IEventObserver{
 				DiscreteCounter tempBatchWaitingTimeCounter = (DiscreteCounter) sims.statisticObjects.get(sims.tempdtcBatchWaitingTime);
 				tempBatchWaitingTimeCounter.count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
 
+				// 5.1.4 Count how often a customer waits
+				if(currentCustomer.getTimeInQueue() > 0) {
+					sims.numWaitingTimeExceeds0++;
+				}
+
 				if (state.numSamplesInCurrentBatch >= sims.batchLength) {
 					System.out.println("New Batch! Total Batches " + sims.numBatches);
 					sims.numBatches++;
 					// New Batch, therefore reset counter and add to batch counter
 					batchWaitingTimeCRE.count(tempBatchWaitingTimeCounter.getMean());
+					// 5.1.4 Mean waiting time batch
+					sims.statisticObjects.get(sims.dtcBatchWaitingTime).count(tempBatchWaitingTimeCounter.getMean());
+
+					// 5.1.4 Check how often batch waiting time exceeds mean.
+					if(tempBatchWaitingTimeCounter.getMean() > 5 * sims.randVarServiceTime.getMean()){
+						sims.numBatchWaitingTimeExceeds5TimesBatchServiceTime++;
+					}
+
 					sims.statisticObjects.put(sims.tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting time/customer"));
 				}
 				
@@ -229,11 +242,18 @@ public class Simulator implements IEventObserver{
 					this.stop();
 				}
 
+				// 5.1.4 mean waiting time all customers.
                 sims.statisticObjects.get(sims.dtcWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
                 sims.statisticObjects.get(sims.dthWaitingTime).count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
 
                 sims.statisticObjects.get(sims.dtcServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
                 sims.statisticObjects.get(sims.dthServiceTime).count(simTimeToRealTime(currentCustomer.getTimeInService()));
+
+				// 5.1.4 See how many customers waiting time exceed 5 times the mean service time.
+				if(currentCustomer.getTimeInQueue() > 5 * sims.randVarServiceTime.getMean()){
+					sims.numWaitingTimeExceeds5TimesServiceTime++;
+				}
+
             }
 
             // update server utilization

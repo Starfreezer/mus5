@@ -34,12 +34,12 @@ public class SimulationStudy {
 	 * They get converted to simulation time units in setSimulationParameters.
 	 */
 	protected long cNInit = 10000;
-	protected double cCvar = 1.5; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
+	protected double cCvar = 1.0; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
 	protected long lBatch = 1000;
 
 	// 5.1.3
-	protected final double cMeanST = 1.5; // E[ST]
-	protected double cSystemUtilization = 0.5; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
+	protected final double cMeanST = 5.; // E[ST]
+	protected double cSystemUtilization = 0.1; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
 	protected double cMeanIAT = cMeanST / cSystemUtilization; // E[IAT] = E[ST] / p
 
 	/**
@@ -209,8 +209,8 @@ public class SimulationStudy {
 			iavRandVar = new Exponential(new StdRNG(1337),1);
 		}
 
-		iavRandVar.setCvar(this.cCvar);
-		RandVar serviceTimeRandVar = new Exponential(new StdRNG(420),1);
+		iavRandVar.setMeanAndCvar(cMeanIAT, cCvar);
+		RandVar serviceTimeRandVar = new Exponential(new StdRNG(420),cMeanST);
 
 		this.randVarInterArrivalTime = iavRandVar;
 		this.randVarServiceTime = serviceTimeRandVar;
@@ -249,7 +249,7 @@ public class SimulationStudy {
 		 * TODO Problem 5.1.1 - Create a DiscreteConfidenceCounterWithRelativeError
 		 * In order to check later if the simulation can be terminated according to the condition
 		 */
-		statisticObjects.put(ccreBatchWaitingTime, new DiscreteConfidenceCounterWithRelativeError("batch waiting time/customer", 0.1));
+		statisticObjects.put(ccreBatchWaitingTime, new DiscreteConfidenceCounterWithRelativeError("confidence batch waiting time/customer", 0.1));
 		statisticObjects.put(tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting time/customer"));
 
 
@@ -257,10 +257,15 @@ public class SimulationStudy {
 		/*
 		 * TODO Problem 5.1.4 - Create counter to calculate the mean waiting time with batch means method
 		 */
+		statisticObjects.put(dtcBatchWaitingTime, new DiscreteCounter("batch waiting time/customer"));
 		/*
 		 * TODO Problem 5.1.4 - Provide means to keep track of E[WT] > 5 * E[ST]
 		 * !!! This is also called "waiting probability" in the sheet !!!
 		 */
+		numWaitingTimeExceeds5TimesServiceTime = 0;
+		numBatchWaitingTimeExceeds5TimesBatchServiceTime = 0;
+		numWaitingTimeExceeds0 = 0;
+
 		/*
 		 * TODO Problem 5.1.4 - Create confidence counter for individual waiting time samples
 		 */
@@ -303,6 +308,12 @@ public class SimulationStudy {
 			System.out.println(statisticObjects.get(dtcWaitingTime).report());
 			System.out.println(statisticObjects.get(dtcServiceTime).report());
 			System.out.println(statisticObjects.get(tempdtcBatchWaitingTime).report());
+
+			System.out.println("Total Customers: " + ((DiscreteCounter) statisticObjects.get(dtcWaitingTime)).getNumSamples());
+			System.out.println("Total Customers that experienced wait time : " + numWaitingTimeExceeds0 + "\nTotal Customers that waited 5x longer than expected service time: " + numWaitingTimeExceeds5TimesServiceTime);
+			System.out.println("Probability of experiencing wait time 5x expected service time: " + (double) numWaitingTimeExceeds5TimesServiceTime / (double) numWaitingTimeExceeds0 );
+
+
 
 		}
 
