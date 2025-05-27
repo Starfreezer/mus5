@@ -37,6 +37,10 @@ public class SimulationStudy {
 	protected double cCvar = 0.5; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
 	protected long lBatch = 1000;
 
+	// 5.1.3
+	protected final double cMeanST = 1.0; // E[ST]
+	protected double cSystemUtilization = 0.5; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
+	protected double cMeanIAT = cMeanST / cSystemUtilization; // E[IAT] = E[ST] / p
 
 	/**
 	 * Main method
