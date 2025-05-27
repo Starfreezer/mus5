@@ -19,7 +19,6 @@ public class Simulator implements IEventObserver{
 	private long now;
 	private SortableQueue ec;
 	private boolean stop;
-	private long totalBatches = 0;
 	
 	/**
 	 * Contains simulator statistics and parameters
@@ -219,8 +218,8 @@ public class Simulator implements IEventObserver{
 					tempWaitingTimeCounter.count(simTimeToRealTime(currentCustomer.getTimeInQueue()));
 
 					if (state.numSamplesInCurrentBatch >= sims.batchLength) {
-						System.out.println("New Batch! Total Batches " + totalBatches);
-						totalBatches = totalBatches + 1;
+						System.out.println("New Batch! Total Batches " + sims.numBatches);
+						sims.numBatches = sims.numBatches + 1;
 						//New Batch, therefore reset counter and add to batch counter
 						batchWaitingTimeCRE.count(tempWaitingTimeCounter.getMean());
 						sims.statisticObjects.put(sims.tempdtcBatchWaitingTime, new DiscreteCounter("temp batch waiting counter"));
