@@ -93,6 +93,21 @@ public class SimulationStudy {
 		return steps;
 	}
 
+	// 5.1.3
+	public void setSystemUtilization(double utilization) {
+		if (utilization < 0.05 || utilization > 0.95) {
+			throw new IllegalArgumentException("System utilization must be in [0.05, 0.95].");
+		}
+		double granularity = 0.05;
+		double mod = utilization % granularity;
+		// Allow for floating point imprecision
+		if (Math.abs(mod) > 1e-9 && Math.abs(mod - granularity) > 1e-9) {
+			throw new IllegalArgumentException("System utilization must be in steps of 0.05.");
+		}
+		this.cSystemUtilization = utilization;
+		this.cMeanIAT = this.cMeanST / this.cSystemUtilization;
+	}
+
 	// PARAMETERS
 	/**
 	 * Turn on/off debug report in console.
@@ -412,19 +427,5 @@ public class SimulationStudy {
 
 		}
 
-	}
-
-	// 5.1.3
-	public void setSystemUtilization(double utilization) {
-		if (utilization < 0.05 || utilization > 0.95) {
-			throw new IllegalArgumentException("System utilization must be in [0.05, 0.95].");
-		}
-		double granularity = 0.05;
-		double mod = (utilization - 0.05) % granularity;
-		if (mod > 1e-9 && granularity - mod > 1e-9) {
-			throw new IllegalArgumentException("System utilization must be in steps of 0.05.");
-		}
-		this.cSystemUtilization = utilization;
-		this.cMeanIAT = this.cMeanST / this.cSystemUtilization;
 	}
 }
