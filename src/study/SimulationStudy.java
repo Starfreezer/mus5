@@ -326,7 +326,7 @@ public class SimulationStudy {
 		 * TODO Problem 5.1.4 - Create counter to calculate the mean waiting time with batch means method
 		 */
 		statisticObjects.put(dtcBatchWaitingTime, new DiscreteCounter("batch waiting time/customer"));
-		statisticObjects.put(dccWaitingTimeCustomer, new DiscreteConfidenceCounter("customer waiting time/customer"));
+		statisticObjects.put(dccWaitingTimeCustomer, new DiscreteConfidenceCounter("customer waiting time/customer", 0.1));
 
 		/*
 		 * TODO Problem 5.1.4 - Provide means to keep track of E[WT] > 5 * E[ST]
