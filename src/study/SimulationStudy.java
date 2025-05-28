@@ -32,7 +32,7 @@ public class SimulationStudy {
 	 */
 	protected long cNInit = 100000;
 	public double cCvar = 2; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
-	protected long lBatch = 1;
+	protected long lBatch = 10000;
 	protected int maxLagAcc = 20;
 	protected static boolean RUN_REPEATED_SIM = false;
 
