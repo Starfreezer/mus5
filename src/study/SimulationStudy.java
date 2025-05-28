@@ -240,7 +240,7 @@ public class SimulationStudy {
 		 * !!! Make sure to use StdRNG objects with different seeds !!!
 		 */
 		RandVar iavRandVar = null;
-		if(this.cCvar < 1) {
+		if(this.cCvar < 1 && this.cCvar > 0) {
 			System.out.println("Choosing ErlangK");
 			iavRandVar = new ErlangK(new StdRNG(1337),1,1);
 			iavRandVar.setMeanAndCvar(cMeanIAT, cCvar);
