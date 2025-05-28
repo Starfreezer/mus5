@@ -85,7 +85,7 @@ public class SimulationStudy {
 	}
 
 	private static double[] generateUtilizationSteps(double start, double end, double step) {
-		int size = (int) ((end - start) / step + 1);
+		int size = (int) Math.round((end - start) / step) + 1;
 		double[] steps = new double[size];
 		for (int i = 0; i < size; i++) {
 			steps[i] = start + i * step;
