@@ -2,6 +2,7 @@ package study;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -30,12 +31,14 @@ public class SimulationStudy {
 	 * They get converted to simulation time units in setSimulationParameters.
 	 */
 	protected long cNInit = 100000;
-	protected double cCvar = 1.0; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
-	protected long lBatch = 1000;
+	public double cCvar = 2; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
+	protected long lBatch = 1;
+	protected int maxLagAcc = 5;
+	protected static boolean RUN_REPEATED_SIM = false;
 
 	// 5.1.3
-	protected final double cMeanST = 5.; // E[ST]
-	protected double cSystemUtilization = 0.9; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
+	protected final double cMeanST = 10.; // E[ST]
+	public double cSystemUtilization = 0.95; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
 	protected double cMeanIAT = cMeanST / cSystemUtilization; // E[IAT] = E[ST] / p
 
 	/**
@@ -52,11 +55,42 @@ public class SimulationStudy {
 		/*
 		 * run simulation
 		 */
+		/**
+		 * TASK 6
+		 * UNCOMMENT CODE IN REPORT FUNCTION FOR OUTPUT
+		 */
+		if(RUN_REPEATED_SIM){
+			runBatchMeansExperiment();
+		}
 		sim.start();
 		/*
 		 * print out report
 		 */
 		sim.report();
+	}
+
+	public static void runBatchMeansExperiment() {
+		double[] cvarOptions = {0.5, 1.0, 2.0};
+		double[] utilizationSteps = generateUtilizationSteps(0.05, 0.95, 0.05);
+		System.out.println("STEPS " + Arrays.toString(utilizationSteps));
+
+		for (double cvar : cvarOptions) {
+			for (double utilization : utilizationSteps) {
+				Simulator sim = new Simulator(cvar, utilization);
+
+				sim.start();
+				sim.report();
+			}
+		}
+	}
+
+	private static double[] generateUtilizationSteps(double start, double end, double step) {
+		int size = (int) ((end - start) / step + 1);
+		double[] steps = new double[size];
+		for (int i = 0; i < size; i++) {
+			steps[i] = start + i * step;
+		}
+		return steps;
 	}
 
 	// PARAMETERS
@@ -171,6 +205,15 @@ public class SimulationStudy {
 		setSimulationParameters();
 		initStatistics();
 	}
+	public SimulationStudy(Simulator sim, double cVar, double utilization) {
+		simulator = sim;
+		simulator.setSimTimeInRealTime(1000);
+		this.cCvar = cVar;
+		this.cSystemUtilization = utilization;
+		setSimulationParameters();
+		initStatistics();
+	}
+
 
 	/**
 	 * Sets simulation parameters, converts real time to simulation time if
@@ -200,18 +243,24 @@ public class SimulationStudy {
 		if(this.cCvar < 1) {
 			System.out.println("Choosing ErlangK");
 			iavRandVar = new ErlangK(new StdRNG(1337),1,1);
+			iavRandVar.setMeanAndCvar(cMeanIAT, cCvar);
+
 
 		} else if (this.cCvar > 1) {
 			System.out.println("Choosing HyperExponential");
 			iavRandVar = new HyperExponential(new StdRNG(1337));
+			iavRandVar.setMean(cMeanIAT);
+			iavRandVar.setCvar(cCvar);
 
 		}
 		else {
 			System.out.println("Choosing Exponential");
 			iavRandVar = new Exponential(new StdRNG(1337),1);
+			iavRandVar.setMeanAndCvar(cMeanIAT, cCvar);
+
 		}
 
-		iavRandVar.setMeanAndCvar(cMeanIAT, cCvar);
+
 		RandVar serviceTimeRandVar = new Exponential(new StdRNG(420),cMeanST);
 
 		this.randVarInterArrivalTime = iavRandVar;
@@ -270,20 +319,22 @@ public class SimulationStudy {
 		numWaitingTimeExceeds0 = 0;
 		numWaitingTimeExceeds0Batch = 0;
 
-		statisticObjects.put(dccWaitingTimeCustomer, new DiscreteConfidenceCounter("Customer waiting time exceeds 5x service time",0.1));
-		statisticObjects.put(dccWaitingTimeCustomerBatch, new DiscreteConfidenceCounter("Customer batch waiting time exceeds 5x service time",0.1));
 
 
 		/*
 		 * TODO Problem 5.1.4 - Create confidence counter for individual waiting time samples
 		 */
+		statisticObjects.put(dccWaitingTimeCustomer, new DiscreteConfidenceCounter("Customer waiting time exceeds 5x service time",0.1));
+
 		/*
 		 * TODO Problem 5.1.4 - Create confidence counter for to count waiting times with batch means method
 		 */
+		statisticObjects.put(dccWaitingTimeCustomerBatch, new DiscreteConfidenceCounter("Customer batch waiting time exceeds 5x service time",0.1));
+
 		/*
 		 * TODO Problem 5.1.5 - Create a DiscreteAutocorrelationCounter for batch means
 		 */
-
+		statisticObjects.put(dtacBatchWaitingTime, new DiscreteAutocorrelationCounter("Autocorrelation Batch waiting time",maxLagAcc));
 	}
 
 
@@ -312,27 +363,51 @@ public class SimulationStudy {
 			// 	System.out.println(so.report());
 			// }
 
-			System.out.println(statisticObjects.get(ccreBatchWaitingTime).report());
-			System.out.println(statisticObjects.get(dtcWaitingTime).report());
-			System.out.println(statisticObjects.get(dtcServiceTime).report());
-			System.out.println(statisticObjects.get(tempdtcBatchWaitingTime).report());
+			/** TASK 6 */
+			if(RUN_REPEATED_SIM){
+				System.out.println("========================================");
+				System.out.println("System Utilization (ρ): " + cSystemUtilization);
+				System.out.println("Coefficient of Variation (cvar[IAT]): " + cCvar);
 
-			System.out.println("Total Customers: " + ((DiscreteCounter) statisticObjects.get(dtcWaitingTime)).getNumSamples());
-			System.out.println("Total Customers that experienced wait time : " + numWaitingTimeExceeds0 + "\nTotal Customers that waited 5x longer than expected service time: " + numWaitingTimeExceeds5TimesServiceTime);
-			System.out.println("Probability of experiencing wait time 5x expected service time: " + (double) numWaitingTimeExceeds5TimesServiceTime / (double) numWaitingTimeExceeds0 );
+				// Mean waiting time with confidence interval
+				System.out.println("---------- Mean Waiting Time (Batch Means) ----------");
+				System.out.println(statisticObjects.get(ccreBatchWaitingTime).report());
 
-			System.out.println("###################################### Confidence Counter individual Customers ####################################");
-			System.out.println(statisticObjects.get(dccWaitingTimeCustomer).report());
+				// Waiting probability (batch-based)
+				System.out.println("---------- Waiting Probability (WT > 5×E[ST]) ----------");
+				System.out.println(statisticObjects.get(dccWaitingTimeCustomerBatch).report());
+			}
+			else{
+				// NORMAL OUTPUT
+				 System.out.println(statisticObjects.get(ccreBatchWaitingTime).report());
+				 System.out.println(statisticObjects.get(dtcWaitingTime).report());
+				 System.out.println(statisticObjects.get(dtcServiceTime).report());
+				 System.out.println(statisticObjects.get(tempdtcBatchWaitingTime).report());
 
-			System.out.println("########################################### BATCHES ###############################################################");
-			System.out.println("Total Batches: " + numBatches);
-			System.out.println("Total Batches with wait time : " + numWaitingTimeExceeds0Batch);
-			System.out.println("Total Batches were mean wait time exceeded 5x expected service time: " + numBatchWaitingTimeExceeds5TimesBatchServiceTime);
-			System.out.println("Probability of experiencing wait time 5x expected service time per batch: " + (double) numBatchWaitingTimeExceeds5TimesBatchServiceTime / (double) numWaitingTimeExceeds0Batch );
-			System.out.println("######################################## Batch Confidence Counter ###############################################################");
+				 System.out.println("Total Customers: " + ((DiscreteCounter) statisticObjects.get(dtcWaitingTime)).getNumSamples());
+				 System.out.println("Total Customers that experienced wait time : " + numWaitingTimeExceeds0 + "\nTotal Customers that waited 5x longer than expected service time: " + numWaitingTimeExceeds5TimesServiceTime);
+				 System.out.println("Probability of experiencing wait time 5x expected service time: " + (double) numWaitingTimeExceeds5TimesServiceTime / (double) numWaitingTimeExceeds0 );
+
+				 System.out.println("###################################### Confidence Counter individual Customers ####################################");
+				 System.out.println(statisticObjects.get(dccWaitingTimeCustomer).report());
+
+				 System.out.println("########################################### BATCHES ###############################################################");
+				 System.out.println("Total Batches: " + numBatches);
+				 System.out.println("Total Batches with wait time : " + numWaitingTimeExceeds0Batch);
+				 System.out.println("Total Batches were mean wait time exceeded 5x expected service time: " + numBatchWaitingTimeExceeds5TimesBatchServiceTime);
+				 System.out.println("Probability of experiencing wait time 5x expected service time per batch: " + (double) numBatchWaitingTimeExceeds5TimesBatchServiceTime / (double) numWaitingTimeExceeds0Batch );
+
+				 System.out.println("######################################## Batch Confidence Counter ###############################################################");
+				 System.out.println(statisticObjects.get(dccWaitingTimeCustomerBatch).report());
+
+				 System.out.println("####################################### Batch Autocorrelation #############################################################");
+				 System.out.println(statisticObjects.get(dtacBatchWaitingTime).report());
+
+			}
 
 
-			System.out.println(statisticObjects.get(dccWaitingTimeCustomerBatch).report());
+
+
 
 
 		}

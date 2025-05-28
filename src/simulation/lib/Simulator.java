@@ -43,6 +43,20 @@ public class Simulator implements IEventObserver{
 		// push the first customer arrival at t = 0
 		pushNewEvent(new CustomerArrivalEvent(state, 0));
 	}
+
+	/**
+	 * Extra constructor for repeated sims.
+	 * @param cvar
+	 * @param utilization
+	 */
+	public Simulator(double cvar, double utilization){
+		// create event chain
+		ec = new SortableQueue();
+		sims = new SimulationStudy(this, cvar, utilization);
+		state = new SimulationState(sims);
+		// push the first customer arrival at t = 0
+		pushNewEvent(new CustomerArrivalEvent(state, 0));
+	}
 	
 	/**
 	 * Sets the number of ticks in simulation time per unit in real time
@@ -227,15 +241,19 @@ public class Simulator implements IEventObserver{
 
 				// Batch handling
 				if (state.numSamplesInCurrentBatch >= sims.batchLength) {
-					System.out.println("New Batch! Total Batches " + sims.numBatches);
+					//System.out.println("New Batch! Total Batches " + sims.numBatches);
 					sims.numBatches++;
 
 					double batchMean = tempBatchWaitingTimeCounter.getMean();
+					//5.1.5 Count autocorrelation
+					sims.statisticObjects.get(sims.dtacBatchWaitingTime).count(batchMean);
+
+
+
 					batchWaitingTimeCRE.count(batchMean);
 					sims.statisticObjects.get(sims.dtcBatchWaitingTime).count(batchMean);
 
 					// Waited more than 5×E[ST] for confidence calculation (use 1)
-					System.out.println("BATCH MEAN: " + batchMean);
 					if (batchMean > 5 * sims.randVarServiceTime.getMean()) {
 						sims.numBatchWaitingTimeExceeds5TimesBatchServiceTime++;
 						sims.statisticObjects.get(sims.dccWaitingTimeCustomerBatch).count(1);
