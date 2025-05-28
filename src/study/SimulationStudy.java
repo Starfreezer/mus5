@@ -37,7 +37,7 @@ public class SimulationStudy {
 	protected static boolean RUN_REPEATED_SIM = false;
 
 	// 5.1.3
-	protected final double cMeanST = 10.; // E[ST]
+	protected final double cMeanST = 1.; // E[ST]
 	public double cSystemUtilization = 0.95; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
 	protected double cMeanIAT = cMeanST / cSystemUtilization; // E[IAT] = E[ST] / p
 
