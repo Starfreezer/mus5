@@ -233,10 +233,10 @@ public class Simulator implements IEventObserver{
 					sims.numWaitingTimeExceeds5TimesServiceTime++;
 
 					// Waited more than 5×E[ST] for confidence calculation (use 1)
-					sims.statisticObjects.get(sims.dccWaitingTimeCustomer).count(1);
+					sims.statisticObjects.get(sims.dccWaitingTimeCustomer5x).count(1);
 				} else if (currentCustomer.getTimeInQueue() > 0) {
 					// Waited > 0 but not more than 5×E[ST] confidence calculation (use 0)
-					sims.statisticObjects.get(sims.dccWaitingTimeCustomer).count(0);
+					sims.statisticObjects.get(sims.dccWaitingTimeCustomer5x).count(0);
 				}
 
 				// Batch handling
@@ -274,6 +274,8 @@ public class Simulator implements IEventObserver{
 				if (batchWaitingTimeCRE.maxRelErr() < 0.05 || batchWaitingTimeCRE.maxAbsErr() < 0.0001) {
 					this.stop();
 				}
+
+				sims.statisticObjects.get(sims.dccWaitingTimeCustomer).count(timeInQueueReal);
 
 				// Mean waiting & service times (for histograms + global stats)
 				sims.statisticObjects.get(sims.dtcWaitingTime).count(timeInQueueReal);

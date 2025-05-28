@@ -33,11 +33,11 @@ public class SimulationStudy {
 	protected long cNInit = 100000;
 	public double cCvar = 2; //<- configuration Parameter for Cvar[IAT] = {0.5, 1, 2}
 	protected long lBatch = 1;
-	protected int maxLagAcc = 5;
+	protected int maxLagAcc = 20;
 	protected static boolean RUN_REPEATED_SIM = false;
 
 	// 5.1.3
-	protected final double cMeanST = 1.; // E[ST]
+	protected final double cMeanST = 1.0; // E[ST]
 	public double cSystemUtilization = 0.95; // p, can be set to any value in [0.05, 0.95] in steps of 0.05
 	protected double cMeanIAT = cMeanST / cSystemUtilization; // E[IAT] = E[ST] / p
 
@@ -85,12 +85,27 @@ public class SimulationStudy {
 	}
 
 	private static double[] generateUtilizationSteps(double start, double end, double step) {
-		int size = (int) ((end - start) / step + 1);
+		int size = (int) Math.round((end - start) / step) + 1;
 		double[] steps = new double[size];
 		for (int i = 0; i < size; i++) {
 			steps[i] = start + i * step;
 		}
 		return steps;
+	}
+
+	// 5.1.3
+	public void setSystemUtilization(double utilization) {
+		if (utilization < 0.05 || utilization > 0.95) {
+			throw new IllegalArgumentException("System utilization must be in [0.05, 0.95].");
+		}
+		double granularity = 0.05;
+		double mod = utilization % granularity;
+		// Allow for floating point imprecision
+		if (Math.abs(mod) > 1e-9 && Math.abs(mod - granularity) > 1e-9) {
+			throw new IllegalArgumentException("System utilization must be in steps of 0.05.");
+		}
+		this.cSystemUtilization = utilization;
+		this.cMeanIAT = this.cMeanST / this.cSystemUtilization;
 	}
 
 	// PARAMETERS
@@ -184,8 +199,9 @@ public class SimulationStudy {
 
 
 	// 5.1.4 Variables to keep track of confidence intervals for customer waiting times.
-	public String dccWaitingTimeCustomer = "confidenceCounterForIndividualCustomerWaitingTime";
+	public String dccWaitingTimeCustomer5x = "confidenceCounterForIndividualCustomerWaitingTime5x";
 	public String dccWaitingTimeCustomerBatch = "confidenceCounterForBatchCustomerWaitingTime";
+	public String dccWaitingTimeCustomer = "confidenceCounterForCustomerWaitingTime";
 
 	public long numWaitingTimeExceeds5TimesServiceTime;
 	public long numBatchWaitingTimeExceeds5TimesBatchServiceTime;
@@ -194,6 +210,7 @@ public class SimulationStudy {
 	public String dtacBatchWaitingTime = "discreteTimeAutocorrelationCounterBatchWaitingTime";
 
 	private Simulator simulator;
+
 
 	/**
 	 * Constructor
@@ -240,7 +257,7 @@ public class SimulationStudy {
 		 * !!! Make sure to use StdRNG objects with different seeds !!!
 		 */
 		RandVar iavRandVar = null;
-		if(this.cCvar < 1) {
+		if(this.cCvar < 1 && this.cCvar > 0) {
 			System.out.println("Choosing ErlangK");
 			iavRandVar = new ErlangK(new StdRNG(1337),1,1);
 			iavRandVar.setMeanAndCvar(cMeanIAT, cCvar);
@@ -309,6 +326,7 @@ public class SimulationStudy {
 		 * TODO Problem 5.1.4 - Create counter to calculate the mean waiting time with batch means method
 		 */
 		statisticObjects.put(dtcBatchWaitingTime, new DiscreteCounter("batch waiting time/customer"));
+		statisticObjects.put(dccWaitingTimeCustomer, new DiscreteConfidenceCounter("customer waiting time/customer"));
 
 		/*
 		 * TODO Problem 5.1.4 - Provide means to keep track of E[WT] > 5 * E[ST]
@@ -324,7 +342,7 @@ public class SimulationStudy {
 		/*
 		 * TODO Problem 5.1.4 - Create confidence counter for individual waiting time samples
 		 */
-		statisticObjects.put(dccWaitingTimeCustomer, new DiscreteConfidenceCounter("Customer waiting time exceeds 5x service time",0.1));
+		statisticObjects.put(dccWaitingTimeCustomer5x, new DiscreteConfidenceCounter("Customer waiting time exceeds 5x service time",0.1));
 
 		/*
 		 * TODO Problem 5.1.4 - Create confidence counter for to count waiting times with batch means method
@@ -390,6 +408,7 @@ public class SimulationStudy {
 
 				 System.out.println("###################################### Confidence Counter individual Customers ####################################");
 				 System.out.println(statisticObjects.get(dccWaitingTimeCustomer).report());
+				 System.out.println(statisticObjects.get(dccWaitingTimeCustomer5x).report());
 
 				 System.out.println("########################################### BATCHES ###############################################################");
 				 System.out.println("Total Batches: " + numBatches);
@@ -412,19 +431,5 @@ public class SimulationStudy {
 
 		}
 
-	}
-
-	// 5.1.3
-	public void setSystemUtilization(double utilization) {
-		if (utilization < 0.05 || utilization > 0.95) {
-			throw new IllegalArgumentException("System utilization must be in [0.05, 0.95].");
-		}
-		double granularity = 0.05;
-		double mod = (utilization - 0.05) % granularity;
-		if (mod > 1e-9 && granularity - mod > 1e-9) {
-			throw new IllegalArgumentException("System utilization must be in steps of 0.05.");
-		}
-		this.cSystemUtilization = utilization;
-		this.cMeanIAT = this.cMeanST / this.cSystemUtilization;
 	}
 }
